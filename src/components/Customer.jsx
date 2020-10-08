@@ -1,247 +1,173 @@
-import React, { Component} from 'react';
+import React, { Component } from 'react';
 import axios from "axios";
-import {Table} from 'semantic-ui-react';
-import CustomerModal from "./CustomerModal";
-import CustomerDelete from "./CustomerDelete";
-import CustomerEdit from "./CustomerEdit";
+import { Table, Pagination, Dropdown } from 'semantic-ui-react';
+import CreateCustomer from "./CreateCustomer";
+import EditCustomer from "./EditCustomer";
+import DeleteCustomer from "./DeleteCustomer";
+import './test.css';
 export default class Customer extends Component {
   constructor(props) {
     super(props);
     this.state = {
+      //database data
       data: [],
-      id: 0,
-      name: '',
-      address: '',
+      //No of total entries to show at a time 
+      totalItems: 10,
+      currentPage: 1,
+      sort: {
+        column: null,
+        direction: 'desc',
+      },
+
     };
+    this.onSort = this.onSort.bind(this)
   }
   componentDidMount() {
     this.getData();
   }
+  //get data using Axios
   getData = () => {
     axios.get('Customers/GetCustomer')
       .then((result) => {
-        console.log(result.data);
+      
         this.setState({
           data: result.data,
         });
-        console.log(this.state.data);
       })
       .catch((error) => {
-        console.log(error);
       });
   }
-    //Update/display the table after modification
-    componentDidUpdate = () => {
-        this.getData();
+  //number of entries dropdown options
+  options = [
+    { key: 1, text: "5", value: 5 },
+    { key: 2, text: "10", value: 10 },
+    { key: 3, text: "20", value: 20 },
+    { key: 4, text: "30", value: 30 },
+  ];
+  //on changing of number of entries
+  onDropdownChangeEvent = (event, { value }) => {
+    this.setState({ totalItems: value, currentPage: 1 });
+  };
+  //on changing of page number
+  onPageChange = (event, data) => {
+    this.setState({
+      currentPage: data.activePage,
+    });
+  };
+  //Sorting the columns
+  onSort = (column) => (e) => {
+    const direction = this.state.sort.column ? (this.state.sort.direction === 'asc' ? 'desc' : 'asc') : 'desc';
+    const sortedData = this.state.data.sort((a, b) => {
+      const nameA = a.name.toUpperCase();
+      const nameB = b.name.toUpperCase();
+      if (nameA < nameB) {
+        return -1;
+      }
+      if (nameA > nameB) {
+        return 1;
+      }
+      return 0;
+      return a.price - b.price;
+    });
+    if (direction === 'desc') {
+      sortedData.reverse();
     }
+    this.setState({
+      data: sortedData,
+      sort: {
+        column,
+        direction,
+      }
+    });
+  };
+  //Setting the sorting arrow in descending and ascending direction
+  setArrow = (column) => {
+    let className = 'sort-direction';
+    if (this.state.sort.column === column) {
+      className += this.state.sort.direction === 'asc' ? ' asc' : ' desc';
+    }
+    return className;
+  };
   render() {
-    let items = this.state.data;
+    let items = this.state.data;  
+    
+    let entries = this.state.totalItems;
+
+    //Calculating total pages
+    this.totalpages = parseInt(items.length / entries);
+    if (items.length % entries !== 0) {
+      this.totalpages++;
+    }
+
+    //Calculating number of entries to show
+    let skip = 0;
+    skip = entries * (this.state.currentPage - 1);
+    let start = skip + 1;
+    let end = skip + entries;
+    if (end > items.length) {
+      end = items.length;
+    }
+    //Truncate customer according to number of entries
+    items = items.slice(start - 1, end);
     return (
-      <div>
-        <CustomerModal />  {/* Modal to create new customer*/} 
-        <Table celled>
+      <div id='container'>
+        <CreateCustomer
+          getDataCreate={this.getData} />
+        <Table id='table' celled className='ui table sortable striped' aria-labelledby="tabelLabel">
           <Table.Header>
             <Table.Row>
-              <Table.HeaderCell>Name</Table.HeaderCell>
-              <Table.HeaderCell>Address</Table.HeaderCell>
+              <Table.HeaderCell onClick={this.onSort('name')}>
+                Name
+              <span className={this.setArrow('name')}></span>
+              </Table.HeaderCell>
+              <Table.HeaderCell onClick={this.onSort('address')}>
+                Address
+              <span className={this.setArrow('address')}></span>
+              </Table.HeaderCell>
               <Table.HeaderCell>Actions</Table.HeaderCell>
               <Table.HeaderCell>Actions</Table.HeaderCell>
             </Table.Row>
           </Table.Header>
-          <Table.Body>
+          <Table.Body>          
             {items.map((item) => {
               return (
                 <Table.Row>
                   <Table.Cell>{item.name}</Table.Cell>
                   <Table.Cell>{item.address}</Table.Cell>
-                  <Table.Cell><CustomerEdit id={item.id} name={item.name} address={item.address} /> </Table.Cell>
-                  <Table.Cell><CustomerDelete id={item.id} /> </Table.Cell>
+                  <Table.Cell>
+                    <EditCustomer
+                      getDataEdit={this.getData}
+                      editData={item} />
+                  </Table.Cell>
+                  <Table.Cell>
+                    <DeleteCustomer
+                      getDataDelete={this.getData}
+                      deleteId={item.id} />
+                  </Table.Cell>
                 </Table.Row>
               );
             })}
           </Table.Body>
         </Table>
+        <br />
+        <span>
+          <Dropdown
+            id="footerdropdown"
+            defaultValue={5}
+            compact
+            selection
+            options={this.options}
+            onChange={this.onDropdownChangeEvent}
+          />
+          <Pagination
+            id="pagination"
+            defaultActivePage={1}
+            totalPages={this.totalpages}
+            onPageChange={this.onPageChange}
+          />
+        </span>
       </div>
     );
   }
-}// import React, { Component, Fragment } from 'react';
-// import axios from "axios";
-// import CustomerButton from "./CustomerButton";
-// import { Table, Modal, Button } from 'semantic-ui-react';
-// import CustomerModal from "./CustomerModal";
-// import CustomerDelete from "./CustomerDelete";
-// import CustomerEdit from "./CustomerEdit";
-
-// export default class Customer extends Component {
-//   constructor(props) {
-//     super(props);
-//     this.state = {
-//       data: [],
-//       buttontext: "New Customer",
-//       id: 0,
-//       open: false,
-//       openDelete: false,
-//       openUpdate: false
-
-      
-//     };
-
-//   }
-
-//   componentDidMount() {
-//     this.getData();
-
-//   }
-//   getData = () => {
-//     axios.get('Customers/GetCustomer')
-//       .then((result) => {
-//         console.log(result.data);
-//         this.setState({
-//           data: result.data,
-//         });
-//         console.log(this.state.data);
-//       })
-//       .catch((error) => {
-//         console.log(error);
-//       });
-
-
-//   }
-
-//   handleButtonClick = () => {
-//     axios.post('Customers/PostCustomer', {
-
-//       name: "Clovis",
-//       Address: "Brisbane"
-//     })
-//       .then((result) => {
-//         console.log(result);
-//         this.getData();
-//       })
-//       .catch((error) => {
-//         console.log(error);
-//       });
-
-
-//   }
-
-//   handleButtonClickDelete = (id) => {
-//     const {data} = this.setState;
-//     axios
-//       .delete(`Customers/DeleteCustomer/${id}`)
-//       .then((result) => {
-//         console.log(result);
-//         this.getData();
-//         this.props.toggleModalDelete();
-//       })
-//       .catch((error) => {
-//         console.log(error);
-//       });
-
-
-//   };
-
-
-//   handleButtonClickUpdate = (editid) => {
-//     console.log(editid);
-//     axios.put(`Customers/PutCustomer/${editid}`, {
-//       id: editid,
-//       name: 'Clovis',
-//       address: 'Brisbane',
-//     })
-//       .then((result) => {
-//         console.log(result);
-//         this.getData();
-//       })
-//       .catch((error) => {
-//         console.log(error);
-//       });
-//   }
-
-//   toggleModal = () => {
-//     this.setState({
-//       open: !this.state.open
-//     })
-//   }
-
-
-//   toggleModalDelete = () => {
-//     this.setState({
-//       open: !this.state.open
-//     })
-//   }
-//   // toggleModalUpdate = () => {
-//   //   this.setState({
-//   //     open: !this.state.open
-//   //   })
-//   // }
-  
-
-
-
-//   render() {
-//     let items = this.state.data;
-//     return (
-//       <div>
-//         <CustomerModal
-//           open={this.state.open}
-//           toggleModal={this.toggleModal}
-//           getData={this.getData}
-//         />        
-//        <CustomerButton buttontext={this.state.buttontext}
-//         color='blue'
-//           handleButtonClick={this.toggleModal}
-//         />
-
-// <CustomerDelete 
-//         open={this.state.openDelete}
-//         toggleModalDelete={this.toggleModalDelete}
-//         />
-//         {/* <CustomerEdit
-//         name={this.state.name}
-//         address={this.state.address}
-//         id={this.state.id}
-//         open={this.state.openUpdate}
-//         toggleModalUpdate={this.toggleModalUpdate}
-//         /> */}
-
-//         <Table celled>
-//           <Table.Header>
-//             <Table.Row>
-//               <Table.HeaderCell>Name</Table.HeaderCell>
-//               <Table.HeaderCell>Address</Table.HeaderCell>
-//               <Table.HeaderCell>Actions</Table.HeaderCell>
-//               <Table.HeaderCell>Actions</Table.HeaderCell>
-//             </Table.Row>
-//           </Table.Header>
-
-//           <Table.Body>
-//             {items.map((item) => {
-
-//               return (
-//                 <Table.Row>
-//                   <Table.Cell>{item.name}</Table.Cell>
-//                   <Table.Cell>{item.address}</Table.Cell>
-//                   <Table.Cell>
-//                     {/* <CustomerButton buttontext="Edit" color='blue'
-//                       handleButtonClick={() => this.toggleModalUpdate(item.id, item.name, item.address)} /> */}
-//                       <CustomerEdit id={item.id} name={item.name} address={item.address} open={this.state.openUpdate}
-//         toggleModalUpdate={this.toggleModalUpdate}
-//         />
-//                   </Table.Cell>
-//                   <Table.Cell>
-//                     <CustomerButton buttontext="Delete" color='red'
-//                       handleButtonClick={() => this.handleButtonClickDelete(item.id)} />
-//                   </Table.Cell>
-//                 </Table.Row>
-//               );
-//             })}
-//           </Table.Body>
-//         </Table>
-//       </div>
-
-
-//     );
-//   }
-// }
+}
 

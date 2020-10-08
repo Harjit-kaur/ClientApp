@@ -1,189 +1,172 @@
 import React, { Component } from 'react';
 import axios from "axios";
-import { Table, Modal, Button } from 'semantic-ui-react';
-import ProductButton from "./ProductButton";
-import ProductModal from "./ProductModal";
-import ProductEdit from "./ProductEdit";
-import ProductDelete from "./ProductDelete";
-export default class Product extends Component {
-
-
+import { Table, Menu, Dropdown, Pagination } from 'semantic-ui-react';
+import CreateProduct from "./CreateProduct";
+import DeleteProduct from "./DeleteProduct";
+import EditProduct from "./EditProduct";
+import './test.css';
+export default class Customer extends Component {
   constructor(props) {
     super(props);
-    this.state = { 
+    this.state = {
+      //database data
       data: [],
-      buttontext: "NewProduct",
-      id: 0,
-      open: false,
-      openDelete: false,
-      openUpdate: false
-     };
-    
+      //No of total entries to show at a time
+      totalItems: 10,
+      currentPage: 1,
+      sort: {
+        column: null,
+        direction: 'desc',
+      },
+    };
+    this.onSort = this.onSort.bind(this)
   }
-
   componentDidMount() {
     this.getData();
   }
-
+  //get data using Axios
   getData = () => {
-  axios.get('Products/GetProduct')
-  .then((result) => {
-    console.log(result.data);
+    axios.get('Products/GetProduct')
+      .then((result) => {
+        this.setState({
+          data: result.data,
+        });
+
+      })
+      .catch((error) => {
+      });
+  }
+  //number of entries dropdown options
+  options = [
+    { key: 1, text: "5", value: 5 },
+    { key: 2, text: "10", value: 10 },
+    { key: 3, text: "20", value: 20 },
+    { key: 4, text: "30", value: 30 },
+  ];
+  //on changing of number of entries
+  onDropdownChangeEvent = (event, { value }) => {
+    this.setState({ totalItems: value, currentPage: 1 });
+  };
+  //on changing of page number
+  onPageChange = (event, data) => {
     this.setState({
-      data: result.data,
+      currentPage: data.activePage,
     });
-  })
-  .catch((error) => {
-    console.log(error);
-  });
-}
-
-handleButtonClick = () => {
-  axios.post('Products/PostProduct', {
-    
-    name: 'HP',
-    price: 600
-  })
-.then((result) => {
-  console.log(result);
-  this.getData();
-})
-  .catch((error) => {
-    console.log(error);
-  });
-
-
-}
-
-handleButtonClickDelete = (id) => {
-  axios
-  .delete(`Products/DeleteProducts/${id}`)
-.then((result) => {
-  console.log(result);
-  this.getData();
-  this.props.toggleModalDelete();
-})
-  .catch((error) => {
-    console.log(error);
-  });
-
-
-};
-
-handleButtonClickUpdate = (editid) => {
-  console.log(editid);
-  axios.put(`Products/PutProduct/${editid}`,{
-    id: editid,
-    name: 'Nike',
-    price: 200,
-  })
-.then((result) => {
-  console.log(result);
-  this.getData();
-})
-  .catch((error) => {
-    console.log(error);
-  });
-}
-toggleModal = () => {
-  this.setState({
-    open: !this.state.open
-  })
-}
-toggleModalDelete = () => {
-  this.setState({
-    open: !this.state.open
-  })
-}
-toggleModalUpdate = () => {
-  this.setState({
-    open: !this.state.open
-  })
-}
-
+  };
+  //Sorting the columns
+  onSort = (column) => (e) => {
+    const direction = this.state.sort.column ? (this.state.sort.direction === 'asc' ? 'desc' : 'asc') : 'desc';
+    const sortedData = this.state.data.sort((a, b) => {
+      const nameA = a.name.toUpperCase();
+      const nameB = b.name.toUpperCase();
+      if (nameA < nameB) {
+        return -1;
+      }
+      if (nameA > nameB) {
+        return 1;
+      }
+      return 0;
+      return a.address - b.address;
+    });
+    if (direction === 'desc') {
+      sortedData.reverse();
+    }
+    this.setState({
+      data: sortedData,
+      sort: {
+        column,
+        direction,
+      }
+    });
+  };
+  //Setting the sorting arrow in descending and ascending direction
+  setArrow = (column) => {
+    let className = 'sort-direction';
+    if (this.state.sort.column === column) {
+      className += this.state.sort.direction === 'asc' ? ' asc' : ' desc';
+    }
+    return className;
+  };
 
   render() {
     let items = this.state.data;
+    let entries = this.state.totalItems;
+    //Calculating total pages
+    this.totalpages = parseInt(items.length / entries);
+    if (items.length % entries !== 0) {
+      this.totalpages++;
+    }
+
+    //Calculating number of entries to show
+    let skip = 0;
+    skip = entries * (this.state.currentPage - 1);
+    let start = skip + 1;
+    let end = skip + entries;
+    if (end > items.length) {
+      end = items.length;
+    }
+    //Truncate customer according to number of entries
+    items = items.slice(start - 1, end);
+
     return (
-      <div>
-        <ProductModal
-          open={this.state.open}
-          toggleModal={this.toggleModal}
-          getData={this.getData}
-        />
-        <ProductDelete 
-        open={this.state.openDelete}
-        toggleModalDelete={this.toggleModalDelete}
-        />
-        <ProductEdit
-        open={this.state.openUpdate}
-        toggleModalUpdate={this.toggleModalUpdate}
-        />
-        <ProductButton buttontext ={this.state.buttontext}
-        handleButtonClick={this.toggleModal}
-        />
-         <Table celled>
-    <Table.Header>
-      <Table.Row>
-        <Table.HeaderCell>Name</Table.HeaderCell>
-        <Table.HeaderCell>Price</Table.HeaderCell>
-        <Table.HeaderCell>Actions</Table.HeaderCell>
-        <Table.HeaderCell>Actions</Table.HeaderCell>
-      </Table.Row>
-    </Table.Header>
-
-    <Table.Body>
-    {items.map((item) => {
-          
-          return (
-      <Table.Row>
-        <Table.Cell>{item.name}</Table.Cell>
-        <Table.Cell>{item.price}</Table.Cell>
-        <Table.Cell>
-        <ProductButton buttontext="Edit"
-        handleButtonClick={() => this.toggleButtonUpdate(item.id)} />
-      
-          </Table.Cell>
-          <Table.Cell>
-          <ProductButton color='blue' buttontext="Delete"
-        handleButtonClick={() => this.toggleButtonDelete(item.id)} />
-  </Table.Cell>
-          </Table.Row>
-          );
-    })}
-    </Table.Body>
-    </Table>
-    </div>
-      // <div>
-      //         <table className="table">
-      //     <thead>
-      //       <tr>
-                         
-  
-      //         <th>
-      //           Name
-      //         </th>
-      //         <th>
-      //           Price
-      //         </th>
-      //         </tr>
-      //     </thead>
-      //     <tbody>         
-        
-      //   {items.map((item) => {
-          
-      //     return (
-      //       <tr>
-      //           <td>{item.name}</td>
-      //         <td>{item.price}</td>
-      //       </tr>
-            
-      //   );
-
-      //   })}
-      //   </tbody>
-      //   </table>
-      // </div>
+      <div id='container'>
+        <CreateProduct
+          getDataCreate={this.getData} />
+        <Table id='table' celled className='ui table sortable striped' aria-labelledby="tabelLabel">
+          <Table.Header>
+            <Table.Row>
+              <Table.HeaderCell onClick={this.onSort('name')}>
+                Name
+              <span className={this.setArrow('name')}></span>
+              </Table.HeaderCell>
+              <Table.HeaderCell onClick={this.onSort('price')}>
+                Price
+              <span className={this.setArrow('price')}></span>
+              </Table.HeaderCell>
+              <Table.HeaderCell>Actions</Table.HeaderCell>
+              <Table.HeaderCell>Actions</Table.HeaderCell>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {/* mapping the product data */}
+            {items.map((item) => {
+              return (
+                <Table.Row>
+                  <Table.Cell>{item.name}</Table.Cell>
+                  <Table.Cell>{item.price}</Table.Cell>
+                  <Table.Cell>
+                    <EditProduct
+                      getDataEdit={this.getData}
+                      editData={item} />
+                  </Table.Cell>
+                  <Table.Cell>
+                    <DeleteProduct
+                      getDataDelete={this.getData}
+                      deleteId={item.id} />
+                  </Table.Cell>
+                </Table.Row>
+              );
+            })}
+          </Table.Body>
+        </Table>
+        <br />
+        <span>
+          <Dropdown
+            id="footerdropdown"
+            defaultValue={5}
+            compact
+            selection
+            options={this.options}
+            onChange={this.onDropdownChangeEvent}
+          />
+          <Pagination
+            id="pagination"
+            defaultActivePage={1}
+            totalPages={this.totalpages}
+            onPageChange={this.onPageChange}
+          />
+        </span>
+      </div>
     );
   }
 }

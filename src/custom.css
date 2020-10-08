@@ -13,7 +13,38 @@ code {
   border-color: #1861ac;
 }
 
-Button
-{
-  color: blue;
+.modalheight{
+  position: relative;
+  height: auto !important;
+
 }
+
+#Form{
+  padding-left: 25px;
+    padding-right: 25px;
+    padding-bottom: 25px;
+    height: auto;
+}
+#popup
+{
+  position: relative;
+    height: auto !important;
+}
+/* .sort-direction {
+  display: flex;
+  width: 71%;
+  margin: 0px;
+  float: right;
+} */
+.desc::before  {
+  content: "▼";
+  float: right;
+  margin-right: 16px;
+  }
+  .asc::before {
+  content: "▲";
+  float: right;
+  margin-right: 16px;
+  }
+
+
